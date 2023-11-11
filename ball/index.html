@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/cropper.min.css">
+    <link rel="stylesheet" href="css/materialize.min.css">
+    <title>丟球軌跡製作工具</title>
+</head>
+<style>
+    html, body {
+        width: 100%;
+        height: 100%;
+    }
+    body {padding: 10px;}
+    img {
+        display: block;
+        max-height: 800px
+    }
+    #crop-co {
+        max-height: calc(100% - 300px);
+    }
+</style>
+<center>
+<body>
+    <div id="pickFilePage">
+        <h2>丟球軌跡製作工具</h2>
+        <div class="file-field input-field" style="width: 400px;">
+            <div class="btn">
+              <span>挑選影片檔案</span>
+              <input id="videoInput" type="file" accept="video/*" />
+            </div>
+            <div class="file-path-wrapper">
+              <input class="file-path validate" type="text" placeholder="尚未選取檔案">
+            </div>
+          </div>
+          <a class="waves-effect waves-light btn-large" href="javascript:startCrop()">開始</a>
+
+    </div>
+    <div id="cropPage" style="display: none;">
+        <h2>丟球軌跡製作工具</h2>
+        <h4>2. 裁切圖片</h4>
+        <div class="progress">
+            <div class="determinate" id="cropBoxProgress" style="width: 70%"></div>
+        </div>
+        <div id="crop-co"></div>
+        <br />
+        <a class="waves-effect waves-light btn-large" href="javascript:saveframe()">下一張</a>
+    </div>
+    <div id="resultPage" style="display: none;">
+        <h2>丟球軌跡製作工具</h2>
+        <h4>製作結果</h4>
+        <img id="finalImg">
+    </div>
+    <canvas id="drawCanvas" style="display: none;"></canvas>
+</body>
+</center>
+<script src="js/jquery.min.js"></script>
+<script src="js/cropper.min.js"></script>
+<script src="js/materialize.min.js"></script>
+<script>
+    var video = document.createElement("video");
+    var drawCanvas = document.getElementById("drawCanvas")
+    var cropCon = document.getElementById("crop-co")
+    var cropBoxProgress = document.getElementById("cropBoxProgress")
+    var totalCropPic;
+    var currentCropIndex = 0;
+    var cropper;
+    var cropBoxData;
+    function startCrop() {
+        $("#pickFilePage").hide()
+        $("#cropPage").show()
+        cropBoxData = {
+            "left":0,
+            "top":0,
+            "width":video.videoWidth,
+            "height":video.videoHeight
+        }
+        totalCropPic = parseInt((video.duration-0.2)/0.2)
+        video.currentTime = 0.2
+    }
+
+    video.addEventListener('seeked', function() {
+        if (video.currentTime == 0.2) {
+            drawCanvas.width = video.videoWidth
+            drawCanvas.height = video.videoHeight
+            drawCanvas.getContext('2d').drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            video.currentTime += 0.2
+        } else {
+            if (video.duration-video.currentTime >= 0.2) {
+                cropBoxProgress.style.width = (currentCropIndex / totalCropPic * 100) + "%"
+                var canvas = document.createElement("canvas")
+                canvas.width = video.videoWidth
+                canvas.height = video.videoHeight
+                canvas.getContext('2d').drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+                var cropImg = document.createElement('img');
+                cropImg.src = canvas.toDataURL();
+                cropImg.style.width = video.videoWidth;
+                cropImg.style.height = video.videoHeight;
+                cropCon.innerHTML = ""
+                cropCon.appendChild(cropImg);
+                cropper = new Cropper(cropImg, {
+                    viewMode: 1,
+                    ready: function (){
+                        cropper.setCropBoxData(cropBoxData)
+                    }
+                });
+            } else {
+                document.getElementById("finalImg").src = drawCanvas.toDataURL()
+                $("#cropPage").hide()
+                $("#resultPage").show()
+            }
+        }
+    }, false);
+    var playSelectedFile = function(event) {
+        var file = this.files[0];
+        var fileURL = URL.createObjectURL(file);
+        video.src = fileURL;
+    }
+    document.getElementById("videoInput").addEventListener('change', playSelectedFile, false);
+    function saveframe() {
+        var cropData = cropper.getData()
+        cropBoxData = cropper.getCropBoxData()
+        drawCanvas.getContext("2d").drawImage(cropper.getCroppedCanvas(),cropData.x,cropData.y,cropData.width,cropData.height)
+        currentCropIndex += 1
+        video.currentTime += 0.2
+    }
+</script>
+
+
+</html>
